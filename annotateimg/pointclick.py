@@ -7,15 +7,18 @@ IPython version 4.0.0
 Python version 3.4.3
 
 """
-
-import numpy as np
-import matplotlib.pyplot as plt
+import cv2 as cv
 import IPython
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import numpy as np
+from matplotlib.widgets import Button
 
 UseNotebook = False
 
 __all__ = [
     "get_control_points", "get_control_points_1img", "drag_control_points", "save_points", "load_points", "show_point"
+    "ImageStreamClickAnnotator"
 ]
 
 
@@ -192,6 +195,113 @@ def show_point(ah, im, cpts, lineshape='g*'):
     ah.set_xlim(temp[0:2])
     ah.set_ylim(temp[2:4])
     ah.plot(cpts[:,0],cpts[:,1], lineshape, markersize=8)
+
+
+class ImageStreamClickAnnotator:
+    """Allows the user to click through a list of images for corresponding points in an image sequence."""
+    def __init__(self, image_paths, max_points=10):
+        self.image_paths = image_paths
+        self.max_points = max_points
+        self.annotations = {}
+        self._image_index = 0
+        self._selected_point_index = 0
+        self._points = [None] * max_points
+
+        self._fig, self._ax = plt.subplots()
+        self._img_plot = None
+        self._graphics = {"scatter": None, "texts": []}
+        self._cids = {}
+
+        # Used in keeping the zoom from previous image.
+        self._prev_xlim = None
+        self._prev_ylim = None
+
+    def _draw_annotations(self):
+        # Clear previous annotations
+        for txt in self._graphics["texts"]:
+            txt.remove()
+        self._graphics["texts"].clear()
+
+        # Filter valid points and update plot
+        valid_points = [(pt[0], pt[1]) for pt in self._points if pt is not None]
+        indices = [i for i, pt in enumerate(self._points) if pt is not None]
+
+        if self._graphics["scatter"]:
+            self._graphics["scatter"].remove()
+
+        if valid_points:
+            x, y = zip(*valid_points)
+            self._graphics["scatter"] = self._ax.scatter(x, y, c='lime', s=40)
+            for i, (pt_x, pt_y) in zip(indices, valid_points):
+                self._graphics["texts"].append(self._ax.text(pt_x + 3, pt_y - 3, str(i), color='lime', fontsize=9))
+
+    def _collect(self):
+        path = self.image_paths[self._image_index]
+        self.annotations[path] = self._points.copy()
+
+    def _on_click(self, event):
+        if event.inaxes != self._ax:
+            return
+        x, y = event.xdata, event.ydata
+        self._points[self._selected_point_index] = (x, y)
+        self._draw_annotations()
+        self._fig.canvas.draw_idle()
+
+    def _on_key(self, event):
+        if event.key in map(str, range(10)):
+            # Change the current point focus
+            self._selected_point_index = int(event.key)
+        elif event.key == 'enter':
+            # Clean up the current image tasks
+            self._collect()
+            # Move to the next image
+            self._image_index += 1
+            if self._image_index < len(self.image_paths):
+                self._load_image()
+            else:
+                print("Annotation complete.")
+                plt.close()
+        elif event.key == 'escape':
+            print("Aborted.")
+            plt.close()
+
+    def _load_image(self):
+        # Store current view limits before clearing
+        if self._img_plot is not None:
+            self._prev_xlim = self._ax.get_xlim()
+            self._prev_ylim = self._ax.get_ylim()
+
+        self._points = [None] * self.max_points
+        img = mpimg.imread(self.image_paths[self._image_index])
+
+        # Clear the previous image and registered graphics.
+        self._ax.clear()
+        self._graphics["scatter"] = None
+        self._graphics["texts"].clear()
+
+        self._img_plot = self._ax.imshow(img)
+        self._ax.set_title(
+            f"Image {self._image_index + 1}/{len(self.image_paths)}: {self.image_paths[self._image_index]}")
+        self._draw_annotations()
+
+        # Restore previous zoom/pan if available
+        if self._prev_xlim and self._prev_ylim:
+            self._ax.set_xlim(self._prev_xlim)
+            self._ax.set_ylim(self._prev_ylim)
+
+        self._fig.canvas.draw_idle()
+
+    def run(self):
+        self._load_image()
+        self._cids["click"] = self._fig.canvas.mpl_connect('button_press_event', self._on_click)
+        self._cids["key"] = self._fig.canvas.mpl_connect('key_press_event', self._on_key)
+        self._cids["close"] = self._fig.canvas.mpl_connect('close_event', lambda event: self._collect())
+        plt.show()
+
+        # Output after completion
+        print("Final Annotations:")
+        for path, pts in self.annotations.items():
+            print(f"{path}: {pts}")
 
 
 if __name__ == '__main__':
