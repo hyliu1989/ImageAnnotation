@@ -215,22 +215,29 @@ class ImagePairClickAnnotator:
     """Allows the user to click corresponding points in two images.
 
     Args:
-        image_paths: List of two image paths.
+        images: List of two image paths or two images.
         max_points: Maximum number of points to annotate for each commitment.
     """
 
-    def __init__(self, image_paths: list[str], max_points: int = 10):
+    def __init__(self, images: list[str] | list[npt.NDArray], max_points: int = 10):
         if 0 < max_points <= 10:
             pass
         else:
             raise ValueError("max_points must be between 1 to 10.")
         self.max_points = max_points
 
+        if isinstance(images[0], str):
+            image_ids = images
+            image_arrays = [mpimg.imread(path) for path in images]
+        else:
+            image_ids = [0, 1]
+            image_arrays = images
+
         fig, axes = plt.subplots(1, 2)
         self._image_content = [
             {
-                "path": image_paths[i],
-                "fig": fig,
+                "id": image_ids[i],
+                "array": image_arrays[i],
                 "ax": axes[i],
                 "img_plot": None,
                 "graphics": {"scatters": [None, None], "texts": []},
@@ -246,13 +253,9 @@ class ImagePairClickAnnotator:
         ]
 
     @property
-    def image_paths(self):
-        return self._image_content[0]["path"], self._image_content[1]["path"]
-
-    @property
     def annotations(self):
         return {
-            self._image_content[i]["path"]: [
+            self._image_content[i]["id"]: [
                 matched_point_pair[i] for matched_point_pair in self._commited_points
             ]
             for i in range(2)
@@ -356,7 +359,7 @@ class ImagePairClickAnnotator:
         self._points = [[None, None] for _ in range(self.max_points)]
         self._clear_annotations()
         for idx_image in range(2):
-            img = mpimg.imread(self.image_paths[idx_image])
+            img = self._image_content[idx_image]["array"]
             axis = self._image_content[idx_image]["ax"]
             self._image_content[idx_image]["img_plot"] = axis.imshow(img)
             self._draw_annotations()
@@ -374,8 +377,8 @@ class ImagePairClickAnnotator:
 
         # Output after completion
         print("Final Annotations:")
-        for path, pts in self.annotations.items():
-            print(f"{path}: {pts}")
+        for image_id, pts in self.annotations.items():
+            logger.info(f"{image_id}: {pts}")
 
 
 class ImageStreamClickAnnotator:
