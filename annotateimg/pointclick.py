@@ -319,7 +319,7 @@ class ImagePairClickAnnotator:
             self._collect()
             self._draw_annotations()
         elif event.key == "escape":
-            print("Aborted.")
+            logger.info("Aborted.")
             plt.close()
 
     def _load_image(self):
@@ -344,7 +344,7 @@ class ImagePairClickAnnotator:
         plt.show()
 
         # Output after completion
-        print("Final Annotations:")
+        logger.info("Final Annotations:")
         for image_id, pts in self.annotations.items():
             logger.info(f"{image_id}: {pts}")
         return self.annotations
@@ -455,10 +455,10 @@ class ImageStreamClickAnnotator:
             if self._image_index < len(self.image_paths):
                 self._load_image()
             else:
-                print("Annotation complete.")
+                logger.info("Annotation complete.")
                 plt.close()
         elif event.key == "escape":
-            print("Aborted.")
+            logger.info("Aborted.")
             plt.close()
 
     def _load_image(self):
@@ -498,9 +498,9 @@ class ImageStreamClickAnnotator:
         plt.show()
 
         # Output after completion
-        print("Final Annotations:")
+        logger.info("Final Annotations:")
         for path, pts in self.annotations.items():
-            print(f"{path}: {pts}")
+            logger.info(f"{path}: {pts}")
         return self.annotations
 
 
