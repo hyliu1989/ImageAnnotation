@@ -237,8 +237,8 @@ class ImageStreamClickAnnotator:
         self.max_points = max_points
         self.annotations = {}
         self._image_index = 0
-        self._selected_point_index = 0
-        self._points = [None] * max_points
+        self._selected_point_index: int = 0
+        self._points: list[None | tuple[int, int]] = [None] * max_points
 
         self._fig, self._ax = plt.subplots()
         self._img_plot = None
@@ -249,18 +249,26 @@ class ImageStreamClickAnnotator:
         self._prev_xlim = None
         self._prev_ylim = None
 
-    def _draw_annotations(self):
-        # Clear previous annotations
-        for txt in self._graphics["texts"]:
+    def _clear_annotations(self):
+        """Clears the current annotations in the axes."""
+        text_annotation: list[plt.Text] = self._graphics["texts"]
+        for txt in text_annotation:
             txt.remove()
-        self._graphics["texts"].clear()
+        text_annotation.clear()
+        # Clear previous scatter points
+        scatter_plot: plt.PathCollection | None = self._graphics["scatters"]
+        if scatter_plot:
+            scatter_plot.remove()
+        self._graphics["scatter"] = None
+
+    def _draw_annotations(self):
+        """Creates the annotations based on current selections and draws them on the axes."""
+        # Clear previous annotations and points
+        self._clear_annotations()
 
         # Filter valid points and update plot
         valid_points = [(pt[0], pt[1]) for pt in self._points if pt is not None]
         indices = [i for i, pt in enumerate(self._points) if pt is not None]
-
-        if self._graphics["scatter"]:
-            self._graphics["scatter"].remove()
 
         if valid_points:
             x, y = zip(*valid_points)
@@ -310,9 +318,7 @@ class ImageStreamClickAnnotator:
         img = mpimg.imread(self.image_paths[self._image_index])
 
         # Clear the previous image and registered graphics.
-        self._ax.clear()
-        self._graphics["scatter"] = None
-        self._graphics["texts"].clear()
+        self._clear_annotations()
 
         self._img_plot = self._ax.imshow(img)
         self._ax.set_title(
@@ -343,8 +349,9 @@ class ImageStreamClickAnnotator:
             print(f"{path}: {pts}")
 
 
-if __name__ == "__main__":
-    """
+def main():
+    """Main function for the illustration.
+
     This part is meant to demonstrate how to use the point selecting function under IPython notebook
     environment. This part can be put into IPython notebook after uncommenting the first line and
     changing get_control_points to imagePointsInput.get_control_points.
@@ -371,3 +378,7 @@ if __name__ == "__main__":
         dtype=np.float64,
     )
     drag_control_points(img, cpts)
+
+
+if __name__ == "__main__":
+    main()
