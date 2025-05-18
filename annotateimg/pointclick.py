@@ -317,6 +317,7 @@ class ImagePairClickAnnotator:
         elif event.key == "enter":
             # Commit the current points
             self._collect()
+            self._draw_annotations()
         elif event.key == "escape":
             print("Aborted.")
             plt.close()
@@ -346,6 +347,7 @@ class ImagePairClickAnnotator:
         print("Final Annotations:")
         for image_id, pts in self.annotations.items():
             logger.info(f"{image_id}: {pts}")
+        return self.annotations
 
 
 class ImageStreamClickAnnotator:
@@ -499,6 +501,7 @@ class ImageStreamClickAnnotator:
         print("Final Annotations:")
         for path, pts in self.annotations.items():
             print(f"{path}: {pts}")
+        return self.annotations
 
 
 def main():
