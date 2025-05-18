@@ -256,7 +256,7 @@ class ImageStreamClickAnnotator:
             txt.remove()
         text_annotation.clear()
         # Clear previous scatter points
-        scatter_plot: plt.PathCollection | None = self._graphics["scatters"]
+        scatter_plot: plt.PathCollection | None = self._graphics["scatter"]
         if scatter_plot:
             scatter_plot.remove()
         self._graphics["scatter"] = None
