@@ -217,6 +217,15 @@ class ImagePairClickAnnotator:
             for i in range(2)
         }
 
+    def _get_fig_title(self):
+        return (
+            "Click on the images to select point pairs.  "
+            f"[point index: {self._selected_point_index}]"
+            "\n  Press 0-9 to select the point index."
+            "\n  Press Enter to commit point pair."
+            "\n  Press Esc or close window to finish."
+        )
+
     def _clear_annotations(self):
         """Clears the current annotations in the axes."""
         for idx_image in range(2):
@@ -304,6 +313,7 @@ class ImagePairClickAnnotator:
         if event.key in map(str, range(10)):
             # Change the current point focus
             self._selected_point_index = int(event.key)
+            self._fig.suptitle(self._get_fig_title())
         elif event.key == "enter":
             # Commit the current points
             self._collect()
@@ -329,6 +339,7 @@ class ImagePairClickAnnotator:
         self._cids["close"] = self._fig.canvas.mpl_connect(
             "close_event", lambda event: self._collect()
         )
+        self._fig.suptitle(self._get_fig_title())
         plt.show()
 
         # Output after completion
@@ -378,6 +389,15 @@ class ImageStreamClickAnnotator:
         self._prev_xlim = None
         self._prev_ylim = None
 
+    def _get_fig_title(self):
+        return (
+            "Click on the image to select points.  "
+            f"[point index: {self._selected_point_index}]"
+            "\n  Press 0-9 to select the point index."
+            "\n  Press Enter to advance to next image."
+            "\n  Press Esc or close window to finish."
+        )
+
     def _clear_annotations(self):
         """Clears the current annotations in the axes."""
         text_annotation: list[plt.Text] = self._graphics["texts"]
@@ -424,6 +444,7 @@ class ImageStreamClickAnnotator:
         if event.key in map(str, range(10)):
             # Change the current point focus
             self._selected_point_index = int(event.key)
+            self._fig.suptitle(self._get_fig_title())
         elif event.key == "enter":
             # Clean up the current image tasks
             self._collect()
@@ -471,6 +492,7 @@ class ImageStreamClickAnnotator:
         self._cids["close"] = self._fig.canvas.mpl_connect(
             "close_event", lambda event: self._collect()
         )
+        self._fig.suptitle(self._get_fig_title())
         plt.show()
 
         # Output after completion
