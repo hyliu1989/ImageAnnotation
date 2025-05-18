@@ -7,6 +7,8 @@ IPython version 4.0.0
 Python version 3.4.3
 
 """
+import logging
+
 import cv2 as cv
 import IPython
 import matplotlib.image as mpimg
@@ -15,6 +17,7 @@ import numpy as np
 from matplotlib.widgets import Button
 
 UseNotebook = False
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "get_control_points",
@@ -24,6 +27,7 @@ __all__ = [
     "load_points",
     "show_point",
     "ImageStreamClickAnnotator",
+    "ImagePairClickAnnotator",
 ]
 
 
@@ -206,6 +210,173 @@ def show_point(ah, im, cpts, lineshape="g*"):
     ah.set_xlim(temp[0:2])
     ah.set_ylim(temp[2:4])
     ah.plot(cpts[:, 0], cpts[:, 1], lineshape, markersize=8)
+
+
+class ImagePairClickAnnotator:
+    """Allows the user to click corresponding points in two images.
+
+    Args:
+        image_paths: List of two image paths.
+        max_points: Maximum number of points to annotate for each commitment.
+    """
+
+    def __init__(self, image_paths: list[str], max_points: int = 10):
+        if 0 < max_points <= 10:
+            pass
+        else:
+            raise ValueError("max_points must be between 1 to 10.")
+        self.max_points = max_points
+
+        fig, axes = plt.subplots(1, 2)
+        self._image_content = [
+            {
+                "path": image_paths[i],
+                "fig": fig,
+                "ax": axes[i],
+                "img_plot": None,
+                "graphics": {"scatters": [None, None], "texts": []},
+            }
+            for i in range(2)
+        ]
+        self._fig = fig
+        self._cids = {}
+        self._commited_points: list[list[tuple[float, float]]] = []
+        self._selected_point_index = 0
+        self._points: list[list[None | tuple[float, float]]] = [
+            [None, None] for _ in range(max_points)
+        ]
+
+    @property
+    def image_paths(self):
+        return self._image_content[0]["path"], self._image_content[1]["path"]
+
+    @property
+    def annotations(self):
+        return {
+            self._image_content[i]["path"]: [
+                matched_point_pair[i] for matched_point_pair in self._commited_points
+            ]
+            for i in range(2)
+        }
+
+    def _clear_annotations(self):
+        """Clears the current annotations in the axes."""
+        for idx_image in range(2):
+            graphics = self._image_content[idx_image]["graphics"]
+            # Clear previous annotations
+            text_annotation: list[plt.Text] = graphics["texts"]
+            for txt in text_annotation:
+                txt.remove()
+            text_annotation.clear()
+            # Clear previous scatter points
+            scatter_plots: list[plt.PathCollection | None] = graphics["scatters"]
+            for i, scatter in enumerate(scatter_plots):
+                if scatter is not None:
+                    scatter.remove()
+                scatter_plots[i] = None
+
+    def _collect(self):
+        for idx_point, point_pair in enumerate(self._points):
+            if (point_pair[0] is None) ^ (point_pair[1] is None):
+                logger.warning(f"Point pair {idx_point} [{point_pair}] contains an unpaired point!")
+                continue
+            if point_pair[0] is None and point_pair[1] is None:
+                # Ignore empty point pairs
+                continue
+            assert point_pair[0] is not None and point_pair[1] is not None
+            # Commit the point pair
+            self._commited_points.append([point_pair[0], point_pair[1]])
+        self._points = [[None, None] for _ in range(self.max_points)]
+
+    def _draw_annotations(self):
+        """Creates the annotations based on current selections and draws them on the axes."""
+        self._clear_annotations()
+        ax_img0 = self._image_content[0]["ax"]
+        ax_img1 = self._image_content[1]["ax"]
+        graphics_img0 = self._image_content[0]["graphics"]
+        graphics_img1 = self._image_content[1]["graphics"]
+
+        # Plot commited points
+        if self._commited_points:
+            pts_img0, pts_img1 = zip(*self._commited_points)
+            xs_img0, ys_img0 = zip(*pts_img0)
+            xs_img1, ys_img1 = zip(*pts_img1)
+            scatter_committed_img0 = ax_img0.scatter(xs_img0, ys_img0, c="limegreen", s=40)
+            scatter_committed_img1 = ax_img1.scatter(xs_img1, ys_img1, c="limegreen", s=40)
+            graphics_img0["scatters"][0] = scatter_committed_img0  # [0] for commited points
+            graphics_img1["scatters"][0] = scatter_committed_img1  # [0] for commited points
+
+        # Filter valid points and update plot
+        points_img0: list[None | tuple[int, int]] = [pair[0] for pair in self._points]
+        valid_points_and_indices_img0 = [
+            (pt[0], pt[1], i) for i, pt in enumerate(points_img0) if pt is not None
+        ]
+        if valid_points_and_indices_img0:
+            xs_img0, ys_img0, _ = zip(*valid_points_and_indices_img0)
+            # graphics_img0["scatters"][1] for current selection
+            graphics_img0["scatters"][1] = ax_img0.scatter(xs_img0, ys_img0, c="lime", s=40)
+            for pt_x, pt_y, i in valid_points_and_indices_img0:
+                graphics_img0["texts"].append(
+                    ax_img0.text(pt_x + 3, pt_y - 3, str(i), color="lime", fontsize=9)
+                )
+
+        points_img1: list[None | tuple[int, int]] = [pair[1] for pair in self._points]
+        valid_points_and_indices_img1 = [
+            (pt[0], pt[1], i) for i, pt in enumerate(points_img1) if pt is not None
+        ]
+        if valid_points_and_indices_img1:
+            xs_img1, ys_img1, _ = zip(*valid_points_and_indices_img1)
+            # graphics_img1["scatters"][1] for current selection
+            graphics_img1["scatters"][1] = ax_img1.scatter(xs_img1, ys_img1, c="lime", s=40)
+            for pt_x, pt_y, i in valid_points_and_indices_img1:
+                graphics_img1["texts"].append(
+                    ax_img1.text(pt_x + 3, pt_y - 3, str(i), color="lime", fontsize=9)
+                )
+
+    def _on_click(self, event):
+        for idx_image in range(2):
+            if event.inaxes != self._image_content[idx_image]["ax"]:
+                continue
+            x, y = event.xdata, event.ydata
+            self._points[self._selected_point_index][idx_image] = (x, y)
+            self._draw_annotations()
+            self._fig.canvas.draw_idle()
+
+    def _on_key(self, event):
+        if event.key in map(str, range(10)):
+            # Change the current point focus
+            self._selected_point_index = int(event.key)
+        elif event.key == "enter":
+            # Commit the current points
+            self._collect()
+        elif event.key == "escape":
+            print("Aborted.")
+            plt.close()
+
+    def _load_image(self):
+        self._points = [[None, None] for _ in range(self.max_points)]
+        self._clear_annotations()
+        for idx_image in range(2):
+            img = mpimg.imread(self.image_paths[idx_image])
+            axis = self._image_content[idx_image]["ax"]
+            self._image_content[idx_image]["img_plot"] = axis.imshow(img)
+            self._draw_annotations()
+
+        self._fig.canvas.draw_idle()
+
+    def run(self):
+        self._load_image()
+        self._cids["click"] = self._fig.canvas.mpl_connect("button_press_event", self._on_click)
+        self._cids["key"] = self._fig.canvas.mpl_connect("key_press_event", self._on_key)
+        self._cids["close"] = self._fig.canvas.mpl_connect(
+            "close_event", lambda event: self._collect()
+        )
+        plt.show()
+
+        # Output after completion
+        print("Final Annotations:")
+        for path, pts in self.annotations.items():
+            print(f"{path}: {pts}")
 
 
 class ImageStreamClickAnnotator:
