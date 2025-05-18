@@ -30,58 +30,14 @@ __all__ = [
 ]
 
 
-def get_control_points(im1, im2, style="g.", **kw):
+def get_control_points(im1, im2):
     """Please hit a pair of points on the two displayed images, and then the next pair.
 
     The hit points will be saved and output as tuple of point lists
     (points1, points2) where points1=[(x1_1,y1_1), (x2_1,y2_1), (x3_1,y3_1), ...]
                              points2=[(x1_2,y1_2), (x2_2,y2_2), (x3_2,y3_2), ...]
     """
-    if UseNotebook:
-        ip = IPython.get_ipython()
-        ip.magic("pylab")
-
-    if "figsize" in kw.keys():
-        fh = plt.figure("Hit enter to terminate", figsize=kw["figsize"])
-    else:
-        fh = plt.figure("Hit enter to terminate")
-
-    ah1 = fh.add_subplot(121)
-    ah2 = fh.add_subplot(122)
-    ah1.imshow(im1, cmap="gray")
-    ah2.imshow(im2, cmap="gray")
-    temp = ah1.axis()
-    ah1.set_xlim(temp[0:2])
-    ah1.set_ylim(temp[2:4])
-    temp = ah2.axis()
-    ah2.set_xlim(temp[0:2])
-    ah2.set_ylim(temp[2:4])
-    fh.tight_layout()
-    fh.canvas.draw()
-
-    pts1 = []
-    pts2 = []
-    try:
-        while True:
-            p1p2 = fh.ginput(2, timeout=-1)
-            print(p1p2)
-            if len(p1p2) != 2:
-                break
-            pts1.append(p1p2[0])
-            pts2.append(p1p2[1])
-
-            #         [     x     ], [     y     ], styles...
-            ah1.plot([pts1[-1][0]], [pts1[-1][1]], style, markersize=6)
-            ah2.plot([pts2[-1][0]], [pts2[-1][1]], style, markersize=6)
-            # force drawing
-            fh.canvas.draw()
-    except KeyboardInterrupt:
-        pass
-
-    if UseNotebook:
-        ip.magic("pylab inline")
-
-    return np.array(pts1), np.array(pts2)
+    return ImagePairClickAnnotator([im1, im2]).run()
 
 
 def get_control_points_1img(im1, style="g.", **kw):
