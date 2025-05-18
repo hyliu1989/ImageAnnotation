@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+"""Image annotation module for image pairs or image stream.
 
-Starter code for point selecting under IPython notebook environment
+It is originally the starter code for point selecting under IPython notebook environment.
 
 IPython version 4.0.0
 Python version 3.4.3
@@ -9,39 +9,44 @@ Python version 3.4.3
 """
 import cv2 as cv
 import IPython
-import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Button
 
 UseNotebook = False
 
 __all__ = [
-    "get_control_points", "get_control_points_1img", "drag_control_points", "save_points", "load_points", "show_point"
-    "ImageStreamClickAnnotator"
+    "get_control_points",
+    "get_control_points_1img",
+    "drag_control_points",
+    "save_points",
+    "load_points",
+    "show_point",
+    "ImageStreamClickAnnotator",
 ]
 
 
-def get_control_points(im1, im2, style='g.', **kw):
-    """
-    Please hit a pair of points on the two displayed images, and then the next pair.
+def get_control_points(im1, im2, style="g.", **kw):
+    """Please hit a pair of points on the two displayed images, and then the next pair.
+
     The hit points will be saved and output as tuple of point lists
     (points1, points2) where points1=[(x1_1,y1_1), (x2_1,y2_1), (x3_1,y3_1), ...]
                              points2=[(x1_2,y1_2), (x2_2,y2_2), (x3_2,y3_2), ...]
     """
     if UseNotebook:
         ip = IPython.get_ipython()
-        ip.magic('pylab')
-    
-    if 'figsize' in kw.keys():
-        fh = plt.figure('Hit enter to terminate', figsize=kw['figsize'])
+        ip.magic("pylab")
+
+    if "figsize" in kw.keys():
+        fh = plt.figure("Hit enter to terminate", figsize=kw["figsize"])
     else:
-        fh = plt.figure('Hit enter to terminate')
-        
+        fh = plt.figure("Hit enter to terminate")
+
     ah1 = fh.add_subplot(121)
     ah2 = fh.add_subplot(122)
-    ah1.imshow(im1, cmap='gray')
-    ah2.imshow(im2, cmap='gray')
+    ah1.imshow(im1, cmap="gray")
+    ah2.imshow(im2, cmap="gray")
     temp = ah1.axis()
     ah1.set_xlim(temp[0:2])
     ah1.set_ylim(temp[2:4])
@@ -50,7 +55,7 @@ def get_control_points(im1, im2, style='g.', **kw):
     ah2.set_ylim(temp[2:4])
     fh.tight_layout()
     fh.canvas.draw()
-    
+
     pts1 = []
     pts2 = []
     try:
@@ -61,7 +66,7 @@ def get_control_points(im1, im2, style='g.', **kw):
                 break
             pts1.append(p1p2[0])
             pts2.append(p1p2[1])
-            
+
             #         [     x     ], [     y     ], styles...
             ah1.plot([pts1[-1][0]], [pts1[-1][1]], style, markersize=6)
             ah2.plot([pts2[-1][0]], [pts2[-1][1]], style, markersize=6)
@@ -71,66 +76,67 @@ def get_control_points(im1, im2, style='g.', **kw):
         pass
 
     if UseNotebook:
-        ip.magic('pylab inline')
-    
+        ip.magic("pylab inline")
+
     return np.array(pts1), np.array(pts2)
 
 
-def get_control_points_1img(im1, style='g.', **kw):
-    """
-    Hit the point and it will be displayed. All the hit points will be displayed.
-    """
+def get_control_points_1img(im1, style="g.", **kw):
+    """Hit the point and it will be displayed. All the hit points will be displayed."""
     if UseNotebook:
         ip = IPython.get_ipython()
-        ip.magic('pylab')
-    
-    if 'figsize' in kw.keys():
-        fh = plt.figure('Close window or hit enter to terminate', figsize=kw['figsize'])
+        ip.magic("pylab")
+
+    if "figsize" in kw.keys():
+        fh = plt.figure("Close window or hit enter to terminate", figsize=kw["figsize"])
     else:
-        fh = plt.figure('Close window or hit enter to terminate')
-        
+        fh = plt.figure("Close window or hit enter to terminate")
+
     ah1 = fh.add_subplot(111)
-    ah1.imshow(im1, cmap='gray')
+    ah1.imshow(im1, cmap="gray")
     temp = ah1.axis()
     ah1.set_xlim(temp[0:2])
     ah1.set_ylim(temp[2:4])
-    
+
     pts1 = []
     while True:
         p1p2 = fh.ginput(1, timeout=-1)
-        if len(p1p2) != 1: break
+        if len(p1p2) != 1:
+            break
         pts1.append(p1p2[0])
-        
+
         #         [     x     ], [     y     ], styles...
-        ah1.plot( [pts1[-1][0]], [pts1[-1][1]], style, markersize=6 )
+        ah1.plot([pts1[-1][0]], [pts1[-1][1]], style, markersize=6)
         # force drawing
         fh.canvas.draw()
 
     if UseNotebook:
-        ip.magic('pylab inline')
-    
+        ip.magic("pylab inline")
+
     return np.array(pts1)
 
 
-def drag_control_points(img, cpts, style='g.'):
-    """
-    Give an initial set of control points; then you can move the points around to their desired positions.
-    cpts should be in the shape of [# of points, 2] where 2 stands for x and y coordinates. x is 0, y is 1.
+def drag_control_points(img, cpts, style="g."):
+    """Allow the users to drag the annotated points.
+
+    Give an initial set of control points; then you can move the points around to their desired
+    positions. cpts should be in the shape of [# of points, 2] where 2 stands for x and y
+    coordinates. x is 0, y is 1.
     """
     if UseNotebook:
         ip = IPython.get_ipython()
-        ip.magic('pylab')
+        ip.magic("pylab")
 
     cpts = cpts.copy()
-    scale = (img.shape[0]**2 + img.shape[1]**2)**0.5/20
-    fh = plt.figure('Close window to terminate')
+    scale = (img.shape[0] ** 2 + img.shape[1] ** 2) ** 0.5 / 20
+    fh = plt.figure("Close window to terminate")
     ah = fh.add_subplot(111)
-    ah.imshow(img, cmap='gray')
+    ah.imshow(img, cmap="gray")
     temp = ah.axis()
     ah.set_xlim(temp[0:2])
     ah.set_ylim(temp[2:4])
     lh = [None]
-    lh[0] = ah.plot(cpts[:,0], cpts[:,1], style)[0]
+    lh[0] = ah.plot(cpts[:, 0], cpts[:, 1], style)[0]
 
     idx = [None]
     figure_exist = [True]
@@ -143,24 +149,24 @@ def drag_control_points(img, cpts, style='g.'):
         else:
             temp_cpts = np.delete(cpts, idx[0], axis=0)
             lh[0].remove()
-            lh[0] = ah.plot(temp_cpts[:,0], temp_cpts[:,1], style)[0]
+            lh[0] = ah.plot(temp_cpts[:, 0], temp_cpts[:, 1], style)[0]
             fh.canvas.draw()
 
     def on_release(event):
-        if idx[0] != None:
+        if idx[0] is not None:
             cpts[idx[0], 0] = event.xdata
             cpts[idx[0], 1] = event.ydata
             lh[0].remove()
-            lh[0] = ah.plot(cpts[:,0], cpts[:,1], style)[0]
+            lh[0] = ah.plot(cpts[:, 0], cpts[:, 1], style)[0]
             fh.canvas.draw()
 
     def handle_close(event):
         print("exit the handle close aha")
         figure_exist[0] = False
 
-    fh.canvas.mpl_connect('close_event', handle_close)
-    fh.canvas.mpl_connect('button_press_event', on_press)
-    fh.canvas.mpl_connect('button_release_event', on_release)
+    fh.canvas.mpl_connect("close_event", handle_close)
+    fh.canvas.mpl_connect("button_press_event", on_press)
+    fh.canvas.mpl_connect("button_release_event", on_release)
 
     fh.show()
 
@@ -168,38 +174,65 @@ def drag_control_points(img, cpts, style='g.'):
         plt.waitforbuttonpress()
 
     if UseNotebook:
-        ip.magic('pylab inline')
+        ip.magic("pylab inline")
 
     return cpts
 
 
 def save_points(filename, pointarray):
+    """Saves the points to a file."""
     if len(pointarray.shape) == 2 and pointarray.shape[1] == 2:
         pass
     else:
-        raise TypeError('Point array should be n-by-2 with the first column for coordinate x and second for y.')
-    
+        raise TypeError(
+            "Point array should be n-by-2 with the first column for coordinate x and second for y."
+        )
+
     np.save(filename, pointarray)
     return None
 
 
 def load_points(filename):
+    """Loads points from a file."""
     return np.load(filename)
 
 
-def show_point(ah, im, cpts, lineshape='g*'):
+def show_point(ah, im, cpts, lineshape="g*"):
+    """Shows points in a given image."""
     # fh = plt.figure(figsize=(14,14))
     # ah = fh.add_subplot(111)
     ah.imshow(im)
     temp = ah.axis()
     ah.set_xlim(temp[0:2])
     ah.set_ylim(temp[2:4])
-    ah.plot(cpts[:,0],cpts[:,1], lineshape, markersize=8)
+    ah.plot(cpts[:, 0], cpts[:, 1], lineshape, markersize=8)
 
 
 class ImageStreamClickAnnotator:
-    """Allows the user to click through a list of images for corresponding points in an image sequence."""
-    def __init__(self, image_paths, max_points=10):
+    """Allows the user to click through a list of images for corresponding points in each image.
+
+    The result is stored in property `annotations` of this class. The format is a dictionary
+    mapping from image path to a list of points or None. The order of the points in the list
+    corresponds to the key (0 to 9) used when the point was clicked.
+
+    E.g.
+    annotations = {
+        "path/to/image_a.jpg": [(a_x1, a_y1), None, (a_x3, a_y4)],
+        "path/to/image_b.jpg": [(b_x1, b_y1), None, (b_x3, b_y4)],
+    }
+    # for max_points == 3.
+
+    Args:
+        image_paths: List of image paths to annotate.
+        max_points: Maximum number of points to annotate per image. Default is 10.
+    """
+
+    def __init__(self, image_paths: list[str], max_points: int = 10):
+        if 0 < max_points <= 10:
+            pass
+        else:
+            raise ValueError("max_points must be between 1 to 10.")
+
         self.image_paths = image_paths
         self.max_points = max_points
         self.annotations = {}
@@ -231,9 +264,11 @@ class ImageStreamClickAnnotator:
 
         if valid_points:
             x, y = zip(*valid_points)
-            self._graphics["scatter"] = self._ax.scatter(x, y, c='lime', s=40)
+            self._graphics["scatter"] = self._ax.scatter(x, y, c="lime", s=40)
             for i, (pt_x, pt_y) in zip(indices, valid_points):
-                self._graphics["texts"].append(self._ax.text(pt_x + 3, pt_y - 3, str(i), color='lime', fontsize=9))
+                self._graphics["texts"].append(
+                    self._ax.text(pt_x + 3, pt_y - 3, str(i), color="lime", fontsize=9)
+                )
 
     def _collect(self):
         path = self.image_paths[self._image_index]
@@ -251,7 +286,7 @@ class ImageStreamClickAnnotator:
         if event.key in map(str, range(10)):
             # Change the current point focus
             self._selected_point_index = int(event.key)
-        elif event.key == 'enter':
+        elif event.key == "enter":
             # Clean up the current image tasks
             self._collect()
             # Move to the next image
@@ -261,7 +296,7 @@ class ImageStreamClickAnnotator:
             else:
                 print("Annotation complete.")
                 plt.close()
-        elif event.key == 'escape':
+        elif event.key == "escape":
             print("Aborted.")
             plt.close()
 
@@ -281,7 +316,9 @@ class ImageStreamClickAnnotator:
 
         self._img_plot = self._ax.imshow(img)
         self._ax.set_title(
-            f"Image {self._image_index + 1}/{len(self.image_paths)}: {self.image_paths[self._image_index]}")
+            f"Image {self._image_index + 1}/{len(self.image_paths)}:"
+            f" {self.image_paths[self._image_index]}"
+        )
         self._draw_annotations()
 
         # Restore previous zoom/pan if available
@@ -293,9 +330,11 @@ class ImageStreamClickAnnotator:
 
     def run(self):
         self._load_image()
-        self._cids["click"] = self._fig.canvas.mpl_connect('button_press_event', self._on_click)
-        self._cids["key"] = self._fig.canvas.mpl_connect('key_press_event', self._on_key)
-        self._cids["close"] = self._fig.canvas.mpl_connect('close_event', lambda event: self._collect())
+        self._cids["click"] = self._fig.canvas.mpl_connect("button_press_event", self._on_click)
+        self._cids["key"] = self._fig.canvas.mpl_connect("key_press_event", self._on_key)
+        self._cids["close"] = self._fig.canvas.mpl_connect(
+            "close_event", lambda event: self._collect()
+        )
         plt.show()
 
         # Output after completion
@@ -304,27 +343,31 @@ class ImageStreamClickAnnotator:
             print(f"{path}: {pts}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
-    This part is meant to demonstrate how to use the point selecting function under IPython notebook environment.
-    This part can be put into IPython notebook after uncommenting the first line and 
+    This part is meant to demonstrate how to use the point selecting function under IPython notebook
+    environment. This part can be put into IPython notebook after uncommenting the first line and
     changing get_control_points to imagePointsInput.get_control_points.
     """
-    im1 = np.zeros((900,900))
-    im2 = np.zeros((950,950))
-    im2[-1,:] = 1
-    im1[-1,:] = 1
-    x1,x2 = get_control_points(im1, im2)
+    im1 = np.zeros((900, 900))
+    im2 = np.zeros((950, 950))
+    im2[-1, :] = 1
+    im1[-1, :] = 1
+    x1, x2 = get_control_points(im1, im2)
     print(x1)
-
 
     """
     This part demonstrates how to use drag_control_points
     """
     img = np.zeros((100, 200, 3), dtype=np.float64)
-    cpts = np.array([[10, 10],
-                     [20, 20],
-                     [10, 20],
-                     [50, 50],
-                     [20, 40],], dtype=np.float64)
+    cpts = np.array(
+        [
+            [10, 10],
+            [20, 20],
+            [10, 20],
+            [50, 50],
+            [20, 40],
+        ],
+        dtype=np.float64,
+    )
     drag_control_points(img, cpts)

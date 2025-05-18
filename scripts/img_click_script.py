@@ -1,9 +1,12 @@
-import matplotlib.pyplot
-matplotlib.use("qt5agg")
-
+# -*- coding: utf-8 -*-
+"""An example script to show how to use pointclick."""
 import cv2 as cv
-import pointclick
+import matplotlib
 import numpy as np
+
+import annotateimg.pointclick as pointclick  # This might need to be moved to after matplotlib.use()
+
+matplotlib.use("qt5agg")
 
 
 left = cv.imread("left.png")
