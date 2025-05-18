@@ -238,7 +238,7 @@ class ImageStreamClickAnnotator:
         self.annotations = {}
         self._image_index = 0
         self._selected_point_index: int = 0
-        self._points: list[None | tuple[int, int]] = [None] * max_points
+        self._points: list[None | tuple[float, float]] = [None for _ in range(max_points)]
 
         self._fig, self._ax = plt.subplots()
         self._img_plot = None
@@ -267,13 +267,14 @@ class ImageStreamClickAnnotator:
         self._clear_annotations()
 
         # Filter valid points and update plot
-        valid_points = [(pt[0], pt[1]) for pt in self._points if pt is not None]
-        indices = [i for i, pt in enumerate(self._points) if pt is not None]
+        valid_points_and_indices = [
+            (pt[0], pt[1], i) for i, pt in enumerate(self._points) if pt is not None
+        ]
 
-        if valid_points:
-            x, y = zip(*valid_points)
-            self._graphics["scatter"] = self._ax.scatter(x, y, c="lime", s=40)
-            for i, (pt_x, pt_y) in zip(indices, valid_points):
+        if valid_points_and_indices:
+            xs, ys, _ = zip(*valid_points_and_indices)
+            self._graphics["scatter"] = self._ax.scatter(xs, ys, c="lime", s=40)
+            for pt_x, pt_y, i in valid_points_and_indices:
                 self._graphics["texts"].append(
                     self._ax.text(pt_x + 3, pt_y - 3, str(i), color="lime", fontsize=9)
                 )
@@ -314,7 +315,7 @@ class ImageStreamClickAnnotator:
             self._prev_xlim = self._ax.get_xlim()
             self._prev_ylim = self._ax.get_ylim()
 
-        self._points = [None] * self.max_points
+        self._points = [None for _ in range(self.max_points)]
         img = mpimg.imread(self.image_paths[self._image_index])
 
         # Clear the previous image and registered graphics.
