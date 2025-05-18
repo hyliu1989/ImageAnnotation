@@ -40,39 +40,9 @@ def get_control_points(im1, im2):
     return ImagePairClickAnnotator([im1, im2]).run()
 
 
-def get_control_points_1img(im1, style="g.", **kw):
+def get_control_points_1img(im1):
     """Hit the point and it will be displayed. All the hit points will be displayed."""
-    if UseNotebook:
-        ip = IPython.get_ipython()
-        ip.magic("pylab")
-
-    if "figsize" in kw.keys():
-        fh = plt.figure("Close window or hit enter to terminate", figsize=kw["figsize"])
-    else:
-        fh = plt.figure("Close window or hit enter to terminate")
-
-    ah1 = fh.add_subplot(111)
-    ah1.imshow(im1, cmap="gray")
-    temp = ah1.axis()
-    ah1.set_xlim(temp[0:2])
-    ah1.set_ylim(temp[2:4])
-
-    pts1 = []
-    while True:
-        p1p2 = fh.ginput(1, timeout=-1)
-        if len(p1p2) != 1:
-            break
-        pts1.append(p1p2[0])
-
-        #         [     x     ], [     y     ], styles...
-        ah1.plot([pts1[-1][0]], [pts1[-1][1]], style, markersize=6)
-        # force drawing
-        fh.canvas.draw()
-
-    if UseNotebook:
-        ip.magic("pylab inline")
-
-    return np.array(pts1)
+    return ImageStreamClickAnnotator([im1]).run()
 
 
 def drag_control_points(img, cpts, style="g."):
@@ -365,18 +335,25 @@ class ImageStreamClickAnnotator:
     # for max_points == 3.
 
     Args:
-        image_paths: List of image paths to annotate.
+        images: List of image paths or images to annotate.
         max_points: Maximum number of points to annotate per image. Default is 10.
     """
 
-    def __init__(self, image_paths: list[str], max_points: int = 10):
+    def __init__(self, images: list[str] | list[npt.NDArray], max_points: int = 10):
         if 0 < max_points <= 10:
             pass
         else:
             raise ValueError("max_points must be between 1 to 10.")
 
-        self.image_paths = image_paths
-        self.max_points = max_points
+        if isinstance(images[0], str):
+            self._image_paths = images
+            self._images = None
+            self._image_ids = self._image_paths
+        else:
+            self._image_paths = None
+            self._images = images
+            self._image_ids = np.arange(len(images))
+        self._max_num_points = max_points
         self.annotations = {}
         self._image_index = 0
         self._selected_point_index: int = 0
@@ -431,8 +408,8 @@ class ImageStreamClickAnnotator:
                 )
 
     def _collect(self):
-        path = self.image_paths[self._image_index]
-        self.annotations[path] = self._points.copy()
+        image_id = self._image_ids[self._image_index]
+        self.annotations[image_id] = self._points.copy()
 
     def _on_click(self, event):
         if event.inaxes != self._ax:
@@ -443,7 +420,7 @@ class ImageStreamClickAnnotator:
         self._fig.canvas.draw_idle()
 
     def _on_key(self, event):
-        if event.key in map(str, range(10)):
+        if event.key in map(str, range(self._max_num_points)):
             # Change the current point focus
             self._selected_point_index = int(event.key)
             self._fig.suptitle(self._get_fig_title())
@@ -452,7 +429,7 @@ class ImageStreamClickAnnotator:
             self._collect()
             # Move to the next image
             self._image_index += 1
-            if self._image_index < len(self.image_paths):
+            if self._image_index < len(self._image_ids):
                 self._load_image()
             else:
                 logger.info("Annotation complete.")
@@ -467,17 +444,21 @@ class ImageStreamClickAnnotator:
             self._prev_xlim = self._ax.get_xlim()
             self._prev_ylim = self._ax.get_ylim()
 
-        self._points = [None for _ in range(self.max_points)]
-        img = mpimg.imread(self.image_paths[self._image_index])
+        self._points = [None for _ in range(self._max_num_points)]
+        if self._image_paths is not None:
+            img = mpimg.imread(self._image_paths[self._image_index])
+        else:
+            assert self._images is not None
+            img = self._images[self._image_index]
 
         # Clear the previous image and registered graphics.
         self._clear_annotations()
 
         self._img_plot = self._ax.imshow(img)
-        self._ax.set_title(
-            f"Image {self._image_index + 1}/{len(self.image_paths)}:"
-            f" {self.image_paths[self._image_index]}"
-        )
+        title = f"Image {self._image_index + 1}/{len(self._image_ids)}"
+        if self._image_paths is not None:
+            title += f": {self._image_paths[self._image_index]}"
+        self._ax.set_title(title)
         self._draw_annotations()
 
         # Restore previous zoom/pan if available
