@@ -9,12 +9,11 @@ Python version 3.4.3
 """
 import logging
 
-import cv2 as cv
 import IPython
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.widgets import Button
+import numpy.typing as npt
 
 UseNotebook = False
 logger = logging.getLogger(__name__)
