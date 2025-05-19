@@ -408,6 +408,9 @@ class ImageStreamClickAnnotator:
                 )
 
     def _collect(self):
+        if self._image_index >= len(self._image_ids):
+            # Already collected at the end of the sequence. Do not re-collect.
+            return
         image_id = self._image_ids[self._image_index]
         self.annotations[image_id] = self._points.copy()
 
