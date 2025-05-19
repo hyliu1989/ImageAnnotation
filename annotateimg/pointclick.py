@@ -284,6 +284,7 @@ class ImagePairClickAnnotator:
             # Change the current point focus
             self._selected_point_index = int(event.key)
             self._fig.suptitle(self._get_fig_title())
+            self._fig.canvas.draw_idle()
         elif event.key == "enter":
             # Commit the current points
             self._collect()
@@ -427,6 +428,7 @@ class ImageStreamClickAnnotator:
             # Change the current point focus
             self._selected_point_index = int(event.key)
             self._fig.suptitle(self._get_fig_title())
+            self._fig.canvas.draw_idle()
         elif event.key == "enter":
             # Clean up the current image tasks
             self._collect()
