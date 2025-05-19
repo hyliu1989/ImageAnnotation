@@ -11,7 +11,7 @@ version = "0.1.0"
 description=""
 readme = "README.md"
 authors = [{ name = "My Name", email = "me@email.com" }]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: BSD License",
